@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/work_entry.dart';
 import '../theme/app_theme.dart';
@@ -48,18 +50,31 @@ class AppState extends ChangeNotifier {
     syncOfflineQueue();         // Attempt background synchronization immediately
   }
 
+  // Helper: get cross-platform app documents directory
+  Future<String> _getAppDir() async {
+    try {
+      if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+        final homeDir = Platform.environment['USERPROFILE'] ?? Platform.environment['HOME'] ?? '';
+        if (homeDir.isNotEmpty) return homeDir;
+      }
+      final dir = await getApplicationDocumentsDirectory();
+      return dir.path;
+    } catch (e) {
+      final dir = await getApplicationDocumentsDirectory();
+      return dir.path;
+    }
+  }
+
   Future<void> _loadSyncQueue() async {
     try {
-      final homeDir = Platform.environment['USERPROFILE'] ?? Platform.environment['HOME'] ?? '';
-      if (homeDir.isNotEmpty) {
-        final file = File('$homeDir/.freelancing_app_sync_queue.json');
-        if (await file.exists()) {
-          final content = await file.readAsString();
-          final List<dynamic> jsonList = jsonDecode(content);
-          _syncQueue.clear();
-          for (final item in jsonList) {
-            _syncQueue.add(Map<String, dynamic>.from(item));
-          }
+      final appDir = await _getAppDir();
+      final file = File('$appDir/.freelancing_app_sync_queue.json');
+      if (await file.exists()) {
+        final content = await file.readAsString();
+        final List<dynamic> jsonList = jsonDecode(content);
+        _syncQueue.clear();
+        for (final item in jsonList) {
+          _syncQueue.add(Map<String, dynamic>.from(item));
         }
       }
     } catch (e) {
@@ -69,11 +84,9 @@ class AppState extends ChangeNotifier {
 
   Future<void> _saveSyncQueue() async {
     try {
-      final homeDir = Platform.environment['USERPROFILE'] ?? Platform.environment['HOME'] ?? '';
-      if (homeDir.isNotEmpty) {
-        final file = File('$homeDir/.freelancing_app_sync_queue.json');
-        await file.writeAsString(jsonEncode(_syncQueue));
-      }
+      final appDir = await _getAppDir();
+      final file = File('$appDir/.freelancing_app_sync_queue.json');
+      await file.writeAsString(jsonEncode(_syncQueue));
     } catch (e) {
       debugPrint('Error saving sync queue: $e');
     }
@@ -81,22 +94,20 @@ class AppState extends ChangeNotifier {
 
   Future<void> _loadCustomEntries() async {
     try {
-      final homeDir = Platform.environment['USERPROFILE'] ?? Platform.environment['HOME'] ?? '';
-      if (homeDir.isNotEmpty) {
-        final file = File('$homeDir/.freelancing_app_entries.json');
-        if (await file.exists()) {
-          final content = await file.readAsString();
-          final List<dynamic> jsonList = jsonDecode(content);
-          _entries.clear();
-          for (final item in jsonList) {
-            _entries.add(WorkEntry.fromJson(item, allTaskTypes));
-          }
-          _entries.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-          if (_selectedMonth.isEmpty && allMonths.isNotEmpty) {
-            _selectedMonth = allMonths.last;
-          }
-          notifyListeners();
+      final appDir = await _getAppDir();
+      final file = File('$appDir/.freelancing_app_entries.json');
+      if (await file.exists()) {
+        final content = await file.readAsString();
+        final List<dynamic> jsonList = jsonDecode(content);
+        _entries.clear();
+        for (final item in jsonList) {
+          _entries.add(WorkEntry.fromJson(item, allTaskTypes));
         }
+        _entries.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        if (_selectedMonth.isEmpty && allMonths.isNotEmpty) {
+          _selectedMonth = allMonths.last;
+        }
+        notifyListeners();
       }
     } catch (e) {
       debugPrint('Error loading cached entries: $e');
@@ -105,12 +116,10 @@ class AppState extends ChangeNotifier {
 
   Future<void> _saveCustomEntries() async {
     try {
-      final homeDir = Platform.environment['USERPROFILE'] ?? Platform.environment['HOME'] ?? '';
-      if (homeDir.isNotEmpty) {
-        final file = File('$homeDir/.freelancing_app_entries.json');
-        final jsonList = _entries.map((e) => e.toJson()).toList();
-        await file.writeAsString(jsonEncode(jsonList));
-      }
+      final appDir = await _getAppDir();
+      final file = File('$appDir/.freelancing_app_entries.json');
+      final jsonList = _entries.map((e) => e.toJson()).toList();
+      await file.writeAsString(jsonEncode(jsonList));
     } catch (e) {
       debugPrint('Error saving cached entries: $e');
     }
@@ -118,18 +127,14 @@ class AppState extends ChangeNotifier {
 
   Future<void> _loadThemeName() async {
     try {
-      final homeDir = Platform.environment['USERPROFILE'] ?? Platform.environment['HOME'] ?? '';
-      if (homeDir.isNotEmpty) {
-        final file = File('$homeDir/.freelancing_app_theme.json');
-        if (await file.exists()) {
-          final content = await file.readAsString();
-          final data = jsonDecode(content);
-          _selectedTheme = data['theme'] as String? ?? 'Royal Violet';
-          final tc = AppThemeColors.themes.firstWhere((t) => t.name == _selectedTheme, orElse: () => AppThemeColors.royalViolet);
-          AppTheme.currentThemeColors = tc;
-          notifyListeners();
-        }
-      }
+      final prefs = await SharedPreferences.getInstance();
+      _selectedTheme = prefs.getString('app_theme') ?? 'Royal Violet';
+      final tc = AppThemeColors.themes.firstWhere(
+        (t) => t.name == _selectedTheme,
+        orElse: () => AppThemeColors.royalViolet,
+      );
+      AppTheme.currentThemeColors = tc;
+      notifyListeners();
     } catch (e) {
       debugPrint('Error loading theme name: $e');
     }
@@ -137,11 +142,8 @@ class AppState extends ChangeNotifier {
 
   Future<void> _saveThemeName() async {
     try {
-      final homeDir = Platform.environment['USERPROFILE'] ?? Platform.environment['HOME'] ?? '';
-      if (homeDir.isNotEmpty) {
-        final file = File('$homeDir/.freelancing_app_theme.json');
-        await file.writeAsString(jsonEncode({'theme': _selectedTheme}));
-      }
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('app_theme', _selectedTheme);
     } catch (e) {
       debugPrint('Error saving theme name: $e');
     }
@@ -572,23 +574,21 @@ class AppState extends ChangeNotifier {
 
   Future<void> _loadCustomTaskTypes() async {
     try {
-      final homeDir = Platform.environment['USERPROFILE'] ?? Platform.environment['HOME'] ?? '';
-      if (homeDir.isNotEmpty) {
-        final file = File('$homeDir/.freelancing_app_task_types.json');
-        if (await file.exists()) {
-          final content = await file.readAsString();
-          final List<dynamic> jsonList = jsonDecode(content);
-          _customTaskTypes.clear();
-          for (final item in jsonList) {
-            _customTaskTypes.add(TaskType(
-              name: item['name'] as String,
-              displayName: item['displayName'] as String,
-              icon: IconData(item['icon'] as int, fontFamily: 'MaterialIcons'),
-              color: Color(item['color'] as int),
-            ));
-          }
-          notifyListeners();
+      final appDir = await _getAppDir();
+      final file = File('$appDir/.freelancing_app_task_types.json');
+      if (await file.exists()) {
+        final content = await file.readAsString();
+        final List<dynamic> jsonList = jsonDecode(content);
+        _customTaskTypes.clear();
+        for (final item in jsonList) {
+          _customTaskTypes.add(TaskType(
+            name: item['name'] as String,
+            displayName: item['displayName'] as String,
+            icon: IconData(item['icon'] as int, fontFamily: 'MaterialIcons'),
+            color: Color(item['color'] as int),
+          ));
         }
+        notifyListeners();
       }
     } catch (e) {
       debugPrint('Error loading custom task types: $e');
@@ -597,17 +597,15 @@ class AppState extends ChangeNotifier {
 
   Future<void> _saveCustomTaskTypes() async {
     try {
-      final homeDir = Platform.environment['USERPROFILE'] ?? Platform.environment['HOME'] ?? '';
-      if (homeDir.isNotEmpty) {
-        final file = File('$homeDir/.freelancing_app_task_types.json');
-        final jsonList = _customTaskTypes.map((t) => {
-          'name': t.name,
-          'displayName': t.displayName,
-          'icon': t.icon.codePoint,
-          'color': t.color.toARGB32(),
-        }).toList();
-        await file.writeAsString(jsonEncode(jsonList));
-      }
+      final appDir = await _getAppDir();
+      final file = File('$appDir/.freelancing_app_task_types.json');
+      final jsonList = _customTaskTypes.map((t) => {
+        'name': t.name,
+        'displayName': t.displayName,
+        'icon': t.icon.codePoint,
+        'color': t.color.toARGB32(),
+      }).toList();
+      await file.writeAsString(jsonEncode(jsonList));
     } catch (e) {
       debugPrint('Error saving custom task types: $e');
     }
@@ -687,18 +685,16 @@ class AppState extends ChangeNotifier {
 
   Future<void> _loadCustomClients() async {
     try {
-      final homeDir = Platform.environment['USERPROFILE'] ?? Platform.environment['HOME'] ?? '';
-      if (homeDir.isNotEmpty) {
-        final file = File('$homeDir/.freelancing_app_clients.json');
-        if (await file.exists()) {
-          final content = await file.readAsString();
-          final List<dynamic> jsonList = jsonDecode(content);
-          _customClients.clear();
-          for (final item in jsonList) {
-            _customClients.add(item as String);
-          }
-          notifyListeners();
+      final appDir = await _getAppDir();
+      final file = File('$appDir/.freelancing_app_clients.json');
+      if (await file.exists()) {
+        final content = await file.readAsString();
+        final List<dynamic> jsonList = jsonDecode(content);
+        _customClients.clear();
+        for (final item in jsonList) {
+          _customClients.add(item as String);
         }
+        notifyListeners();
       }
     } catch (e) {
       debugPrint('Error loading custom clients: $e');
@@ -707,11 +703,9 @@ class AppState extends ChangeNotifier {
 
   Future<void> _saveCustomClients() async {
     try {
-      final homeDir = Platform.environment['USERPROFILE'] ?? Platform.environment['HOME'] ?? '';
-      if (homeDir.isNotEmpty) {
-        final file = File('$homeDir/.freelancing_app_clients.json');
-        await file.writeAsString(jsonEncode(_customClients));
-      }
+      final appDir = await _getAppDir();
+      final file = File('$appDir/.freelancing_app_clients.json');
+      await file.writeAsString(jsonEncode(_customClients));
     } catch (e) {
       debugPrint('Error saving custom clients: $e');
     }
