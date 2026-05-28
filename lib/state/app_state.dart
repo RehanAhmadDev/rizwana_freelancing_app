@@ -21,6 +21,7 @@ class AppState extends ChangeNotifier {
   String _userName = 'Rizwana';
   String _userEmail = 'rizwana@freelancing.com';
   double _hourlyRate = 30.0;
+  int _selectedAvatarIndex = 0;
 
   // Monthly Target Goal configuration
   double _monthlyTargetGoal = 1000.0;
@@ -61,6 +62,7 @@ class AppState extends ChangeNotifier {
     await _loadCustomEntries(); // Load local cached entries immediately (instant startup)
     await _loadSyncQueue();     // Load pending sync queue
     await _loadTargetGoal();    // Load monthly target goal
+    await _loadAvatarIndex();   // Load selected avatar index
     await _loadThemeName();     // Load premium selected theme
     _fetchProfile();
     _startListeningToEntries();
@@ -369,6 +371,27 @@ class AppState extends ChangeNotifier {
 
   // ──────────────────── TARGET GOAL GETTERS/SETTERS ────────────────────
   double get monthlyTargetGoal => _monthlyTargetGoal;
+  int get selectedAvatarIndex => _selectedAvatarIndex;
+
+  Future<void> _loadAvatarIndex() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _selectedAvatarIndex = prefs.getInt('selected_avatar_index') ?? 0;
+    } catch (e) {
+      debugPrint('Error loading avatar index: $e');
+    }
+  }
+
+  void updateAvatarIndex(int index) async {
+    _selectedAvatarIndex = index;
+    notifyListeners();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt('selected_avatar_index', index);
+    } catch (e) {
+      debugPrint('Error saving avatar index: $e');
+    }
+  }
 
   Future<void> _loadTargetGoal() async {
     try {

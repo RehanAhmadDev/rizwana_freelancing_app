@@ -110,46 +110,43 @@ class _SettingsScreenState extends State<SettingsScreen> {
           padding: EdgeInsets.all(
             ResponsiveLayout.isMobile(context) ? AppTheme.spacingMD : AppTheme.spacingXL,
           ),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 600),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Title Header
-                  const Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Application Settings',
-                        style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: -0.5),
-                      ),
-                      Text(
-                        'Configure developer credentials, billing rates, and theme modes',
-                        style: TextStyle(fontSize: 12),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: AppTheme.spacingLG),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 600),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Title Header
+                    const Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Application Settings',
+                          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: -0.5),
+                        ),
+                        Text(
+                          'Configure developer credentials, billing rates, and theme modes',
+                          style: TextStyle(fontSize: 12),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppTheme.spacingLG),
 
-                  // ── Section 1: Profile & Billing ──
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(AppTheme.spacingLG),
+                    // Premium Profile Banner & Metrics card
+                    _buildProfileBanner(context),
+                    const SizedBox(height: AppTheme.spacingMD),
+
+                    // ── Section 1: Collapsible Developer Profile & Billing ──
+                    SettingsCollapsibleTile(
+                      icon: Icons.badge_outlined,
+                      iconColor: AppTheme.primary,
+                      title: 'Developer Profile',
+                      subtitle: 'Configure credentials and billing rate',
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
-                            children: [
-                              Icon(Icons.badge_outlined, color: AppTheme.primary, size: 20),
-                              const SizedBox(width: 8),
-                              const Text('Developer Profile', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                            ],
-                          ),
-                          const Divider(height: AppTheme.spacingLG),
-                          
-                          // Name Input
                           const Text('Developer Name', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                           const SizedBox(height: 6),
                           TextFormField(
@@ -162,7 +159,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ),
                           const SizedBox(height: AppTheme.spacingMD),
 
-                          // Email Input
                           const Text('Email Address', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                           const SizedBox(height: 6),
                           TextFormField(
@@ -174,9 +170,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             ),
                             validator: (v) => (v == null || v.trim().isEmpty) ? 'Email is required' : null,
                           ),
-                          const SizedBox(height: AppTheme.spacingLG),
+                          const SizedBox(height: AppTheme.spacingMD),
 
-                          // Billing Rate
                           const Text('Hourly Billing Rate (Rs. / hr)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                           const SizedBox(height: 6),
                           TextFormField(
@@ -194,7 +189,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ),
                           const SizedBox(height: AppTheme.spacingMD),
 
-                          // Monthly Target Goal
                           const Text('Monthly Target Goal', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                           const SizedBox(height: 6),
                           TextFormField(
@@ -212,7 +206,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ),
                           const SizedBox(height: AppTheme.spacingLG),
 
-                          // Save Profile Button
                           SizedBox(
                             width: double.infinity,
                             child: ElevatedButton.icon(
@@ -224,24 +217,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ],
                       ),
                     ),
-                  ),
-                  const SizedBox(height: AppTheme.spacingMD),
+                    const SizedBox(height: AppTheme.spacingXS),
 
-                  // ── Section 2: Display & Accessibility ──
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(AppTheme.spacingLG),
+                    // ── Section 2: Collapsible Appearance customizer ──
+                    SettingsCollapsibleTile(
+                      icon: Icons.palette_outlined,
+                      iconColor: AppTheme.accent,
+                      title: 'Appearance',
+                      subtitle: 'Dark mode and dynamic color accents',
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
-                            children: [
-                              Icon(Icons.palette_outlined, color: AppTheme.accent, size: 20),
-                              const SizedBox(width: 8),
-                              const Text('Appearance', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                            ],
-                          ),
-                          const Divider(height: AppTheme.spacingLG),
                           SwitchListTile.adaptive(
                             value: widget.isDarkMode,
                             onChanged: (_) => widget.onToggleTheme(),
@@ -298,7 +284,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                           child: Row(
                                             mainAxisSize: MainAxisSize.min,
                                             children: [
-                                              // Color circle
                                               Container(
                                                 width: 16,
                                                 height: 16,
@@ -354,24 +339,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ],
                       ),
                     ),
-                  ),
-                  const SizedBox(height: AppTheme.spacingMD),
+                    const SizedBox(height: AppTheme.spacingXS),
 
-                  // ── Section 2.5: Custom Task Types ──
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(AppTheme.spacingLG),
+                    // ── Section 3: Collapsible Custom Task Types ──
+                    SettingsCollapsibleTile(
+                      icon: Icons.category_outlined,
+                      iconColor: AppTheme.primary,
+                      title: 'Custom Task Types',
+                      subtitle: 'Add or remove task categories',
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
-                            children: [
-                              Icon(Icons.category_outlined, color: AppTheme.primary, size: 20),
-                              const SizedBox(width: 8),
-                              const Text('Custom Task Types', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                            ],
-                          ),
-                          const Divider(height: AppTheme.spacingLG),
                           state.customTaskTypes.isEmpty
                               ? const Padding(
                                   padding: EdgeInsets.symmetric(vertical: 12.0),
@@ -419,26 +397,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ],
                       ),
                     ),
-                  ),
-                  const SizedBox(height: AppTheme.spacingMD),
+                    const SizedBox(height: AppTheme.spacingXS),
 
-                  // ── Section 3: Data Management (Danger Zone) ──
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(AppTheme.spacingLG),
+                    // ── Section 4: Collapsible Data Management (Danger Zone) ──
+                    SettingsCollapsibleTile(
+                      icon: Icons.storage_rounded,
+                      iconColor: AppTheme.danger,
+                      title: 'Data Management',
+                      subtitle: 'Clear all logged work or restore default samples',
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Row(
-                            children: [
-                              Icon(Icons.storage_rounded, color: AppTheme.danger, size: 20),
-                              SizedBox(width: 8),
-                              Text('Data Management', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                            ],
-                          ),
-                          const Divider(height: AppTheme.spacingLG),
-                          
-                          // Reload sample data
                           ListTile(
                             contentPadding: EdgeInsets.zero,
                             title: const Text('Reload Default Sample Data', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
@@ -462,8 +431,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             ),
                           ),
                           const Divider(),
-                          
-                          // Wipe database
                           ListTile(
                             contentPadding: EdgeInsets.zero,
                             title: const Text('Clear All Logged Work', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.danger)),
@@ -477,13 +444,231 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ],
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildProfileBanner(BuildContext context) {
+    final state = AppStateProvider.of(context);
+    final theme = Theme.of(context);
+
+    final List<IconData> avatars = [
+      Icons.brush_rounded,             // Creative / Illustrator
+      Icons.code_rounded,              // Tech Developer
+      Icons.design_services_rounded,   // UI / UX Designer
+      Icons.edit_note_rounded,         // Writer
+      Icons.emoji_objects_rounded,     // Idea / Consultant
+      Icons.pets_rounded,              // Animal Lover
+    ];
+    final selectedIcon = avatars[state.selectedAvatarIndex % avatars.length];
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppTheme.spacingLG),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                GestureDetector(
+                  onTap: () => _showAvatarPickerSheet(context, avatars),
+                  child: Stack(
+                    children: [
+                      Container(
+                        width: 72,
+                        height: 72,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: AppTheme.primary, width: 3),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppTheme.primary.withAlpha(76),
+                              blurRadius: 12,
+                              spreadRadius: 2,
+                            ),
+                          ],
+                        ),
+                        child: CircleAvatar(
+                          backgroundColor: theme.scaffoldBackgroundColor,
+                          child: Icon(selectedIcon, color: AppTheme.primary, size: 36),
+                        ),
+                      ),
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: AppTheme.primary,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.edit_rounded, color: Colors.white, size: 10),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: AppTheme.spacingMD),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Hello, ${state.userName}! 👋',
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                      Text(
+                        state.userEmail,
+                        style: TextStyle(fontSize: 12, color: theme.textTheme.bodySmall?.color),
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: const BoxDecoration(
+                              color: AppTheme.success,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          const Text(
+                            'Cloud Synchronized',
+                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.success),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const Divider(height: AppTheme.spacingLG),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildMetricCol(
+                    context,
+                    title: 'Logged Entries',
+                    value: '${state.allEntries.length}',
+                  ),
+                ),
+                Container(width: 1, height: 32, color: theme.dividerColor),
+                Expanded(
+                  child: _buildMetricCol(
+                    context,
+                    title: 'Active Clients',
+                    value: '${state.allClients.length - 1}',
+                  ),
+                ),
+                Container(width: 1, height: 32, color: theme.dividerColor),
+                Expanded(
+                  child: _buildMetricCol(
+                    context,
+                    title: 'Active Theme',
+                    value: state.selectedTheme,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMetricCol(BuildContext context, {required String title, required String value}) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+          overflow: TextOverflow.ellipsis,
+        ),
+        const SizedBox(height: 2),
+        Text(
+          title,
+          style: TextStyle(fontSize: 10, color: Theme.of(context).textTheme.bodySmall?.color),
+          overflow: TextOverflow.ellipsis,
+        ),
+      ],
+    );
+  }
+
+  void _showAvatarPickerSheet(BuildContext context, List<IconData> avatars) {
+    final state = AppStateProvider.of(context);
+    final theme = Theme.of(context);
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return Container(
+          padding: const EdgeInsets.all(AppTheme.spacingLG),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Select Profile Icon',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded),
+                    onPressed: () => Navigator.pop(ctx),
+                  ),
+                ],
+              ),
+              const Divider(),
+              const SizedBox(height: AppTheme.spacingMD),
+              SizedBox(
+                height: 72,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: avatars.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 12),
+                  itemBuilder: (ctx, idx) {
+                    final isSel = state.selectedAvatarIndex == idx;
+                    return GestureDetector(
+                      onTap: () {
+                        state.updateAvatarIndex(idx);
+                        Navigator.pop(ctx);
+                      },
+                      child: Container(
+                        width: 64,
+                        height: 64,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: isSel ? AppTheme.primary : theme.dividerColor,
+                            width: isSel ? 3.0 : 1.0,
+                          ),
+                          color: isSel ? AppTheme.primary.withAlpha(26) : Colors.transparent,
+                        ),
+                        child: Icon(avatars[idx], color: isSel ? AppTheme.primary : theme.iconTheme.color, size: 28),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: AppTheme.spacingLG),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -528,6 +713,102 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+class SettingsCollapsibleTile extends StatefulWidget {
+  final IconData icon;
+  final Color iconColor;
+  final String title;
+  final String subtitle;
+  final Widget child;
+
+  const SettingsCollapsibleTile({
+    super.key,
+    required this.icon,
+    required this.iconColor,
+    required this.title,
+    required this.subtitle,
+    required this.child,
+  });
+
+  @override
+  State<SettingsCollapsibleTile> createState() => _SettingsCollapsibleTileState();
+}
+
+class _SettingsCollapsibleTileState extends State<SettingsCollapsibleTile> {
+  bool _isExpanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          InkWell(
+            onTap: () {
+              setState(() {
+                _isExpanded = !_isExpanded;
+              });
+            },
+            child: Padding(
+              padding: const EdgeInsets.all(AppTheme.spacingMD),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(AppTheme.spacingSM),
+                    decoration: BoxDecoration(
+                      color: widget.iconColor.withAlpha(26),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusMD),
+                    ),
+                    child: Icon(widget.icon, color: widget.iconColor, size: 20),
+                  ),
+                  const SizedBox(width: AppTheme.spacingMD),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.title,
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                        ),
+                        Text(
+                          widget.subtitle,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: theme.textTheme.bodySmall?.color,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  AnimatedRotation(
+                    turns: _isExpanded ? 0.25 : 0.0,
+                    duration: const Duration(milliseconds: 200),
+                    child: Icon(Icons.chevron_right_rounded, color: theme.iconTheme.color?.withAlpha(128)),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          AnimatedCrossFade(
+            firstChild: const SizedBox.shrink(),
+            secondChild: Column(
+              children: [
+                const Divider(height: 1),
+                Padding(
+                  padding: const EdgeInsets.all(AppTheme.spacingLG),
+                  child: widget.child,
+                ),
+              ],
+            ),
+            crossFadeState: _isExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+            duration: const Duration(milliseconds: 200),
+          ),
+        ],
       ),
     );
   }
