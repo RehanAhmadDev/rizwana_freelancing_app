@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_state_provider.dart';
 import '../widgets/responsive_layout.dart';
+import '../models/work_entry.dart';
 import 'work_log_screen.dart';
 import 'clients_screen.dart';
 import 'reports_screen.dart';
 import 'settings_screen.dart';
+import 'add_entry_sheet.dart';
 
 
 class HomePage extends StatefulWidget {
@@ -27,6 +29,9 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   bool _isSidebarCollapsed = false;
   bool _isSearching = false;
   late final TextEditingController _searchCtrl;
+  late final TextEditingController _timerClientCtrl;
+  late final TextEditingController _timerLabelCtrl;
+  TaskType _timerTaskType = TaskType.carousel;
   late AnimationController _sidebarAnimationController;
   late Animation<double> _sidebarWidthAnimation;
 
@@ -42,6 +47,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   void initState() {
     super.initState();
     _searchCtrl = TextEditingController();
+    _timerClientCtrl = TextEditingController();
+    _timerLabelCtrl = TextEditingController();
     _sidebarAnimationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 250),
@@ -57,6 +64,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   @override
   void dispose() {
     _searchCtrl.dispose();
+    _timerClientCtrl.dispose();
+    _timerLabelCtrl.dispose();
     _sidebarAnimationController.dispose();
     super.dispose();
   }
@@ -132,6 +141,21 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         children: [
           _buildWelcomeSection(),
           const SizedBox(height: AppTheme.spacingLG),
+          if (crossAxisCount >= 4)
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: _buildGoalProgressCard(context)),
+                const SizedBox(width: AppTheme.spacingLG),
+                Expanded(child: _buildLiveTimerCard(context)),
+              ],
+            )
+          else ...[
+            _buildGoalProgressCard(context),
+            const SizedBox(height: AppTheme.spacingLG),
+            _buildLiveTimerCard(context),
+          ],
+          const SizedBox(height: AppTheme.spacingLG),
           _buildStatsGrid(crossAxisCount: crossAxisCount),
           const SizedBox(height: AppTheme.spacingLG),
           if (crossAxisCount >= 4)
@@ -161,6 +185,10 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildWelcomeSection(),
+          const SizedBox(height: AppTheme.spacingLG),
+          _buildGoalProgressCard(context),
+          const SizedBox(height: AppTheme.spacingMD),
+          _buildLiveTimerCard(context),
           const SizedBox(height: AppTheme.spacingLG),
           // Flexible row-column combo layout for mobile stats (zero bottom overflows)
           _buildMobileStatsColumn(),
@@ -995,6 +1023,416 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     );
   }
 
+  Widget _buildGoalProgressCard(BuildContext context) {
+    final state = AppStateProvider.of(context);
+    final theme = Theme.of(context);
+    
+    final month = state.latestMonth.isEmpty ? 'May 2026' : state.latestMonth;
+    final totalEarned = state.totalEarningsForMonth(month);
+    final target = state.monthlyTargetGoal;
+    final double percent = target > 0 ? (totalEarned / target).clamp(0.0, 1.0) : 0.0;
+    final displayPercent = (percent * 100).toStringAsFixed(0);
+    final isGoalAchieved = totalEarned >= target;
+
+    return Card(
+      child: Container(
+        padding: const EdgeInsets.all(AppTheme.spacingLG),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(AppTheme.radiusLG),
+          gradient: isGoalAchieved 
+              ? LinearGradient(
+                  colors: [AppTheme.success.withAlpha(26), AppTheme.success.withAlpha(51)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                )
+              : null,
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: (isGoalAchieved ? AppTheme.success : AppTheme.primary).withAlpha(26),
+                          borderRadius: BorderRadius.circular(AppTheme.radiusSM),
+                        ),
+                        child: Text(
+                          isGoalAchieved ? '🎉 GOAL CRUSHED' : '📈 MONTHLY PROGRESS',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: isGoalAchieved ? AppTheme.success : AppTheme.primary,
+                            letterSpacing: 1.0,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppTheme.spacingSM),
+                  Text(
+                    'Rs. ${totalEarned.toStringAsFixed(0)} earned of Rs. ${target.toStringAsFixed(0)}',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    isGoalAchieved 
+                        ? 'Congratulations! You have achieved your goal for $month!'
+                        : 'You are $displayPercent% on track to hit your monthly target in $month.',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: theme.textTheme.bodySmall?.color,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: AppTheme.spacingMD),
+            // Progress Indicator Stack
+            SizedBox(
+              width: 64,
+              height: 64,
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: CircularProgressIndicator(
+                      value: percent,
+                      strokeWidth: 6,
+                      backgroundColor: theme.dividerColor,
+                      color: isGoalAchieved ? AppTheme.success : AppTheme.primary,
+                      strokeCap: StrokeCap.round,
+                    ),
+                  ),
+                  Center(
+                    child: Text(
+                      '$displayPercent%',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: isGoalAchieved ? AppTheme.success : AppTheme.primary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLiveTimerCard(BuildContext context) {
+    final state = AppStateProvider.of(context);
+    final theme = Theme.of(context);
+
+    if (!state.isTimerActive) {
+      return Card(
+        child: Padding(
+          padding: const EdgeInsets.all(AppTheme.spacingLG),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.bolt_rounded, color: AppTheme.warning, size: 20),
+                  const SizedBox(width: 6),
+                  const Text(
+                    'Quick Live Tracker',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+              const Divider(height: AppTheme.spacingMD),
+              Row(
+                children: [
+                  Expanded(
+                    child: Autocomplete<String>(
+                      initialValue: TextEditingValue(text: _timerClientCtrl.text),
+                      optionsBuilder: (TextEditingValue textEditingValue) {
+                        final clients = state.allClients.where((c) => c != 'All').toList();
+                        if (textEditingValue.text.isEmpty) {
+                          return clients;
+                        }
+                        return clients.where((String option) {
+                          return option.toLowerCase().contains(textEditingValue.text.toLowerCase());
+                        });
+                      },
+                      onSelected: (String selection) {
+                        _timerClientCtrl.text = selection;
+                      },
+                      optionsViewBuilder: (context, onSelected, options) {
+                        final theme = Theme.of(context);
+                        return Align(
+                          alignment: Alignment.topLeft,
+                          child: Material(
+                            elevation: 4.0,
+                            borderRadius: BorderRadius.circular(AppTheme.radiusMD),
+                            color: theme.cardColor,
+                            child: Container(
+                              width: 250,
+                              constraints: const BoxConstraints(maxHeight: 200),
+                              child: ListView.builder(
+                                padding: EdgeInsets.zero,
+                                shrinkWrap: true,
+                                itemCount: options.length,
+                                itemBuilder: (BuildContext context, int index) {
+                                  final String option = options.elementAt(index);
+                                  return InkWell(
+                                    onTap: () => onSelected(option),
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                                      child: Row(
+                                        children: [
+                                          Icon(Icons.person_outline_rounded, size: 16, color: AppTheme.primary),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            option,
+                                            style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                      fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+                        return TextField(
+                          controller: controller,
+                          focusNode: focusNode,
+                          onSubmitted: (v) => onFieldSubmitted(),
+                          decoration: const InputDecoration(
+                            hintText: 'Client name',
+                            prefixIcon: Icon(Icons.person_outline_rounded, size: 16),
+                            contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          ),
+                          onChanged: (val) {
+                            _timerClientCtrl.text = val;
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: DropdownButtonFormField<TaskType>(
+                      value: _timerTaskType,
+                      decoration: const InputDecoration(
+                        contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      ),
+                      items: state.allTaskTypes
+                          .map((t) => DropdownMenuItem(
+                                value: t,
+                                child: Row(
+                                  children: [
+                                    Icon(t.icon, size: 14, color: t.color),
+                                    const SizedBox(width: 6),
+                                    Text(t.displayName, style: TextStyle(fontSize: 12, color: t.color)),
+                                  ],
+                                ),
+                              ))
+                          .toList(),
+                      onChanged: (v) {
+                        if (v != null) {
+                          setState(() {
+                            _timerTaskType = v;
+                          });
+                        }
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _timerLabelCtrl,
+                      decoration: const InputDecoration(
+                        hintText: 'Session Description (e.g. Day 1, Redesign)',
+                        prefixIcon: Icon(Icons.label_outline_rounded, size: 16),
+                        contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton(
+                    onPressed: () {
+                      final client = _timerClientCtrl.text.trim();
+                      final label = _timerLabelCtrl.text.trim();
+                      state.startTimer(
+                        client.isEmpty ? 'Client' : client,
+                        _timerTaskType,
+                        label.isEmpty ? 'Work Log' : label,
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    ),
+                    child: const Icon(Icons.play_arrow_rounded, color: Colors.white),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final totalSecs = state.timerSeconds;
+    final h = totalSecs ~/ 3600;
+    final m = (totalSecs % 3600) ~/ 60;
+    final s = totalSecs % 60;
+    final durationStr = "${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}";
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppTheme.spacingLG),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                const _PulsingDot(),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '⚡ Active Work Session',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).textTheme.bodySmall?.color,
+                        ),
+                      ),
+                      Text(
+                        'Client: ${state.timerClient} · ${state.timerTaskType.displayName}',
+                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                Text(
+                  durationStr,
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'Courier',
+                    color: AppTheme.primary,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppTheme.spacingMD),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton.icon(
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        title: const Text('Discard Session?'),
+                        content: const Text('Are you sure you want to stop and discard this session without logging the time?'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(ctx),
+                            child: const Text('Cancel'),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              Navigator.pop(ctx);
+                              state.resetTimer();
+                            },
+                            child: const Text('Discard', style: TextStyle(color: AppTheme.danger)),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.delete_outline_rounded, color: AppTheme.danger, size: 18),
+                  label: const Text('Discard', style: TextStyle(color: AppTheme.danger)),
+                ),
+                const SizedBox(width: 8),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    if (state.isTimerPaused) {
+                      state.resumeTimer();
+                    } else {
+                      state.pauseTimer();
+                    }
+                  },
+                  icon: Icon(state.isTimerPaused ? Icons.play_arrow_rounded : Icons.pause_rounded, size: 18),
+                  label: Text(state.isTimerPaused ? 'Resume' : 'Pause'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: theme.colorScheme.surface,
+                    foregroundColor: AppTheme.primary,
+                    side: BorderSide(color: AppTheme.primary),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    final capturedSeconds = state.timerSeconds;
+                    final client = state.timerClient;
+                    final type = state.timerTaskType;
+                    final label = state.timerLabel;
+                    
+                    state.resetTimer();
+                    _timerClientCtrl.clear();
+                    _timerLabelCtrl.clear();
+
+                    final ch = capturedSeconds ~/ 3600;
+                    final cm = (capturedSeconds % 3600) ~/ 60;
+                    final cs = capturedSeconds % 60;
+
+                    showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      backgroundColor: Colors.transparent,
+                      useSafeArea: true,
+                      builder: (_) => AddEntrySheet(
+                        appState: state,
+                        initialMonth: state.latestMonth.isEmpty ? 'May 2026' : state.latestMonth,
+                        prefilledClient: client,
+                        prefilledTaskType: type,
+                        prefilledLabel: label,
+                        prefilledHours: ch,
+                        prefilledMinutes: cm,
+                        prefilledSeconds: cs,
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.stop_rounded, size: 18),
+                  label: const Text('Stop & Log'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.success,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
 
   // --- MOBILE BOTTOM NAVIGATION BAR ---
   Widget _buildBottomNavigationBar(BuildContext context) {
@@ -1110,4 +1548,54 @@ class LineChartPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _PulsingDot extends StatefulWidget {
+  const _PulsingDot();
+
+  @override
+  State<_PulsingDot> createState() => _PulsingDotState();
+}
+
+class _PulsingDotState extends State<_PulsingDot> with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 1),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _ctrl,
+      builder: (context, child) {
+        return Container(
+          width: 12,
+          height: 12,
+          decoration: BoxDecoration(
+            color: AppTheme.success.withOpacity(0.3 + 0.7 * _ctrl.value),
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: AppTheme.success.withAlpha((128 * _ctrl.value).toInt()),
+                blurRadius: 6 + 6 * _ctrl.value,
+                spreadRadius: 1 + 2 * _ctrl.value,
+              )
+            ],
+          ),
+        );
+      },
+    );
+  }
 }

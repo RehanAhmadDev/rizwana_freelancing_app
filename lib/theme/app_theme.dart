@@ -55,12 +55,21 @@ class AppThemeColors {
     accent: Color(0xFF7C3AED), // Purple
   );
 
+  static const customGradient = AppThemeColors(
+    name: 'Custom Gradient',
+    primary: Color(0xFF6366F1),
+    primaryLight: Color(0xFF818CF8),
+    primaryDark: Color(0xFF4F46E5),
+    accent: Color(0xFFD946EF),
+  );
+
   static const List<AppThemeColors> themes = [
     royalViolet,
     emeraldMint,
     oceanBreeze,
     amberGold,
     roseCrimson,
+    customGradient,
   ];
 }
 

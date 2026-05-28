@@ -23,6 +23,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late final TextEditingController _nameCtrl;
   late final TextEditingController _emailCtrl;
   late final TextEditingController _rateCtrl;
+  late final TextEditingController _targetCtrl;
   final ScrollController _colorScrollController = ScrollController();
   bool _isInitialized = false;
 
@@ -34,6 +35,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _nameCtrl = TextEditingController(text: state.userName);
       _emailCtrl = TextEditingController(text: state.userEmail);
       _rateCtrl = TextEditingController(text: state.hourlyRate.toStringAsFixed(0));
+      _targetCtrl = TextEditingController(text: state.monthlyTargetGoal.toStringAsFixed(0));
       _isInitialized = true;
     }
   }
@@ -43,6 +45,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _nameCtrl.dispose();
     _emailCtrl.dispose();
     _rateCtrl.dispose();
+    _targetCtrl.dispose();
     _colorScrollController.dispose();
     super.dispose();
   }
@@ -53,6 +56,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     state.updateProfile(_nameCtrl.text.trim(), _emailCtrl.text.trim());
     final newRate = double.tryParse(_rateCtrl.text) ?? state.hourlyRate;
     state.updateHourlyRate(newRate);
+    final newTarget = double.tryParse(_targetCtrl.text) ?? state.monthlyTargetGoal;
+    state.updateTargetGoal(newTarget);
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -189,13 +194,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ),
                           const SizedBox(height: AppTheme.spacingMD),
 
+                          // Monthly Target Goal
+                          const Text('Monthly Target Goal', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 6),
+                          TextFormField(
+                            controller: _targetCtrl,
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(
+                              hintText: 'e.g. 1000',
+                              prefixIcon: Icon(Icons.ads_click_rounded),
+                            ),
+                            validator: (v) {
+                              if (v == null || v.trim().isEmpty) return 'Monthly target goal is required';
+                              if (double.tryParse(v) == null) return 'Enter a valid number';
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: AppTheme.spacingLG),
+
                           // Save Profile Button
                           SizedBox(
                             width: double.infinity,
                             child: ElevatedButton.icon(
                               onPressed: _saveProfile,
                               icon: const Icon(Icons.check_rounded),
-                              label: const Text('Save Profile & Rate', style: TextStyle(fontWeight: FontWeight.bold)),
+                              label: const Text('Save Profile & Settings', style: TextStyle(fontWeight: FontWeight.bold)),
                             ),
                           ),
                         ],
@@ -306,6 +329,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               ),
                             ),
                           ),
+                          if (state.selectedTheme == 'Custom Gradient') ...[
+                            const Divider(height: AppTheme.spacingLG),
+                            const Text('Custom Gradient: Start Color (Primary)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                            const SizedBox(height: AppTheme.spacingSM),
+                            _buildColorGrid(
+                              context,
+                              selectedColor: state.customPrimaryColor,
+                              onColorSelected: (c) {
+                                state.updateCustomColors(c, state.customAccentColor);
+                              },
+                            ),
+                            const SizedBox(height: AppTheme.spacingMD),
+                            const Text('Custom Gradient: End Color (Accent)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                            const SizedBox(height: AppTheme.spacingSM),
+                            _buildColorGrid(
+                              context,
+                              selectedColor: state.customAccentColor,
+                              onColorSelected: (c) {
+                                state.updateCustomColors(state.customPrimaryColor, c);
+                              },
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -438,6 +483,51 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildColorGrid(BuildContext context, {required Color selectedColor, required ValueChanged<Color> onColorSelected}) {
+    final List<Color> colors = [
+      const Color(0xFF6366F1), // Indigo
+      const Color(0xFFD946EF), // Fuchsia
+      const Color(0xFF10B981), // Emerald
+      const Color(0xFFF59E0B), // Amber
+      const Color(0xFF06B6D4), // Cyan
+      const Color(0xFFEF4444), // Rose
+      const Color(0xFF8B5CF6), // Purple
+      const Color(0xFFEC4899), // Pink
+      const Color(0xFF3B82F6), // Blue
+      const Color(0xFF14B8A6), // Teal
+    ];
+
+    return SizedBox(
+      height: 44,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: colors.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (ctx, idx) {
+          final c = colors[idx];
+          final sel = selectedColor.value == c.value;
+          return GestureDetector(
+            onTap: () => onColorSelected(c),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: c,
+                shape: BoxShape.circle,
+                border: sel ? Border.all(color: Colors.white, width: 3) : null,
+                boxShadow: sel
+                    ? [BoxShadow(color: c.withAlpha(128), blurRadius: 8, spreadRadius: 1)]
+                    : null,
+              ),
+              child: sel ? const Icon(Icons.check, color: Colors.white, size: 16) : null,
+            ),
+          );
+        },
       ),
     );
   }

@@ -22,6 +22,22 @@ class AppState extends ChangeNotifier {
   String _userEmail = 'rizwana@freelancing.com';
   double _hourlyRate = 30.0;
 
+  // Monthly Target Goal configuration
+  double _monthlyTargetGoal = 1000.0;
+
+  // Live Work Session Timer state
+  bool _isTimerActive = false;
+  bool _isTimerPaused = false;
+  int _timerSeconds = 0;
+  Timer? _timer;
+  String _timerClient = '';
+  TaskType _timerTaskType = TaskType.carousel;
+  String _timerLabel = '';
+
+  // Custom Gradient Theme configuration
+  Color _customPrimaryColor = const Color(0xFF6366F1);
+  Color _customAccentColor = const Color(0xFFD946EF);
+
   final List<TaskType> _customTaskTypes = [];
   List<TaskType> get customTaskTypes => List.unmodifiable(_customTaskTypes);
 
@@ -44,6 +60,7 @@ class AppState extends ChangeNotifier {
     await _loadCustomClients();
     await _loadCustomEntries(); // Load local cached entries immediately (instant startup)
     await _loadSyncQueue();     // Load pending sync queue
+    await _loadTargetGoal();    // Load monthly target goal
     await _loadThemeName();     // Load premium selected theme
     _fetchProfile();
     _startListeningToEntries();
@@ -129,14 +146,33 @@ class AppState extends ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       _selectedTheme = prefs.getString('app_theme') ?? 'Royal Violet';
+      final primaryVal = prefs.getInt('custom_theme_primary') ?? 0xFF6366F1;
+      final accentVal = prefs.getInt('custom_theme_accent') ?? 0xFFD946EF;
+      _customPrimaryColor = Color(primaryVal);
+      _customAccentColor = Color(accentVal);
+      
+      _updateCurrentColors();
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error loading theme name: $e');
+    }
+  }
+
+  void _updateCurrentColors() {
+    if (_selectedTheme == 'Custom Gradient') {
+      AppTheme.currentThemeColors = AppThemeColors(
+        name: 'Custom Gradient',
+        primary: _customPrimaryColor,
+        primaryLight: _customPrimaryColor.withAlpha(204),
+        primaryDark: _customPrimaryColor.withAlpha(255),
+        accent: _customAccentColor,
+      );
+    } else {
       final tc = AppThemeColors.themes.firstWhere(
         (t) => t.name == _selectedTheme,
         orElse: () => AppThemeColors.royalViolet,
       );
       AppTheme.currentThemeColors = tc;
-      notifyListeners();
-    } catch (e) {
-      debugPrint('Error loading theme name: $e');
     }
   }
 
@@ -151,10 +187,25 @@ class AppState extends ChangeNotifier {
 
   void updateTheme(String themeName) async {
     _selectedTheme = themeName;
-    final tc = AppThemeColors.themes.firstWhere((t) => t.name == themeName, orElse: () => AppThemeColors.royalViolet);
-    AppTheme.currentThemeColors = tc;
+    _updateCurrentColors();
     notifyListeners();
     await _saveThemeName();
+  }
+
+  void updateCustomColors(Color primary, Color accent) async {
+    _customPrimaryColor = primary;
+    _customAccentColor = accent;
+    if (_selectedTheme == 'Custom Gradient') {
+      _updateCurrentColors();
+    }
+    notifyListeners();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt('custom_theme_primary', primary.toARGB32());
+      await prefs.setInt('custom_theme_accent', accent.toARGB32());
+    } catch (e) {
+      debugPrint('Error saving custom colors: $e');
+    }
   }
 
   Future<void> syncOfflineQueue() async {
@@ -315,6 +366,86 @@ class AppState extends ChangeNotifier {
   String get userName => _userName;
   String get userEmail => _userEmail;
   double get hourlyRate => _hourlyRate;
+
+  // ──────────────────── TARGET GOAL GETTERS/SETTERS ────────────────────
+  double get monthlyTargetGoal => _monthlyTargetGoal;
+
+  Future<void> _loadTargetGoal() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _monthlyTargetGoal = prefs.getDouble('monthly_target_goal') ?? 1000.0;
+    } catch (e) {
+      debugPrint('Error loading target goal: $e');
+    }
+  }
+
+  void updateTargetGoal(double goal) async {
+    _monthlyTargetGoal = goal;
+    notifyListeners();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setDouble('monthly_target_goal', goal);
+    } catch (e) {
+      debugPrint('Error saving target goal: $e');
+    }
+  }
+
+  // ──────────────────── LIVE SESSION TIMER GETTERS & METHODS ────────────────────
+  bool get isTimerActive => _isTimerActive;
+  bool get isTimerPaused => _isTimerPaused;
+  int get timerSeconds => _timerSeconds;
+  String get timerClient => _timerClient;
+  TaskType get timerTaskType => _timerTaskType;
+  String get timerLabel => _timerLabel;
+
+  Color get customPrimaryColor => _customPrimaryColor;
+  Color get customAccentColor => _customAccentColor;
+
+  void startTimer(String client, TaskType taskType, String label) {
+    if (_isTimerActive) return;
+    _timerClient = client;
+    _timerTaskType = taskType;
+    _timerLabel = label;
+    _isTimerActive = true;
+    _isTimerPaused = false;
+    _timerSeconds = 0;
+    _timer?.cancel();
+    _timer = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (!_isTimerPaused) {
+        _timerSeconds++;
+        notifyListeners();
+      }
+    });
+    notifyListeners();
+  }
+
+  void pauseTimer() {
+    if (!_isTimerActive) return;
+    _isTimerPaused = true;
+    notifyListeners();
+  }
+
+  void resumeTimer() {
+    if (!_isTimerActive || !_isTimerPaused) return;
+    _isTimerPaused = false;
+    notifyListeners();
+  }
+
+  void stopTimer() {
+    _timer?.cancel();
+    _timer = null;
+    _isTimerActive = false;
+    _isTimerPaused = false;
+    notifyListeners();
+  }
+
+  void resetTimer() {
+    stopTimer();
+    _timerSeconds = 0;
+    _timerClient = '';
+    _timerLabel = '';
+    notifyListeners();
+  }
 
   // ──────────────────── PROFILE & RATE ACTIONS ────────────────────
 
@@ -713,6 +844,7 @@ class AppState extends ChangeNotifier {
 
   @override
   void dispose() {
+    _timer?.cancel();
     _entriesSubscription?.cancel();
     super.dispose();
   }

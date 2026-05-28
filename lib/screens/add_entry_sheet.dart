@@ -10,11 +10,24 @@ class AddEntrySheet extends StatefulWidget {
   final String initialMonth;
   final WorkEntry? editEntry;
 
+  final String? prefilledClient;
+  final TaskType? prefilledTaskType;
+  final String? prefilledLabel;
+  final int? prefilledHours;
+  final int? prefilledMinutes;
+  final int? prefilledSeconds;
+
   const AddEntrySheet({
     super.key,
     required this.appState,
     required this.initialMonth,
     this.editEntry,
+    this.prefilledClient,
+    this.prefilledTaskType,
+    this.prefilledLabel,
+    this.prefilledHours,
+    this.prefilledMinutes,
+    this.prefilledSeconds,
   });
 
   @override
@@ -49,16 +62,16 @@ class _AddEntrySheetState extends State<AddEntrySheet> {
     super.initState();
     final e = widget.editEntry;
     // Pre-fill from existing entry or sensible defaults
-    _clientCtrl = TextEditingController(text: e?.clientName ?? '');
-    _labelCtrl  = TextEditingController(text: e?.label ?? '');
+    _clientCtrl = TextEditingController(text: e?.clientName ?? widget.prefilledClient ?? '');
+    _labelCtrl  = TextEditingController(text: e?.label ?? widget.prefilledLabel ?? '');
     _noteCtrl   = TextEditingController(text: e?.note ?? '');
-    _taskType   = e?.taskType ?? TaskType.carousel;
+    _taskType   = e?.taskType ?? widget.prefilledTaskType ?? TaskType.carousel;
     _month      = _monthOptions.contains(e?.month ?? widget.initialMonth)
                       ? (e?.month ?? widget.initialMonth)
                       : _monthOptions[3]; // April 2025
-    _hours      = e?.hours ?? 3;
-    _minutes    = e?.minutes ?? 0;
-    _seconds    = e?.seconds ?? 0;
+    _hours      = e?.hours ?? widget.prefilledHours ?? 3;
+    _minutes    = e?.minutes ?? widget.prefilledMinutes ?? 0;
+    _seconds    = e?.seconds ?? widget.prefilledSeconds ?? 0;
   }
 
   @override
