@@ -5,6 +5,7 @@ import '../widgets/responsive_layout.dart';
 import '../models/work_entry.dart';
 import 'work_log_screen.dart';
 import 'clients_screen.dart';
+import 'earnings_screen.dart';
 import 'reports_screen.dart';
 import 'settings_screen.dart';
 import 'add_entry_sheet.dart';
@@ -39,6 +40,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     {'icon': Icons.dashboard_rounded,    'label': 'Dashboard'},
     {'icon': Icons.work_history_rounded, 'label': 'Work Log'},
     {'icon': Icons.people_alt_rounded,   'label': 'Clients'},
+    {'icon': Icons.payments_rounded,     'label': 'Earnings'},
     {'icon': Icons.bar_chart_rounded,    'label': 'Reports'},
     {'icon': Icons.settings_rounded,     'label': 'Settings'},
   ];
@@ -117,8 +119,10 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       case 2:
         return const ClientsScreen();
       case 3:
-        return const ReportsScreen();
+        return const EarningsScreen();
       case 4:
+        return const ReportsScreen();
+      case 5:
         return SettingsScreen(
           onToggleTheme: widget.onToggleTheme,
           isDarkMode: widget.isDarkMode,
